@@ -3,6 +3,9 @@
 #![no_main]
 
 use core::panic::PanicInfo;
+use core::fmt::Write;
+
+mod vga;
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
@@ -13,21 +16,11 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-static HELLO: &[u8] = b"Hello World!";
-
 #[no_mangle]
 pub extern "C" fn kernel_main() -> ! {
-    let vga_buffer = 0xb8000 as *mut u8;
-
-    for i in (0..HELLO.len()) {
-        write_char(HELLO[i], i)
+    for i in 1..30 {
+        write!(vga::CONSOLE.lock(), "Hello {}\n", i);
     }
 
     loop {}
-}
-
-fn write_char(c: u8, pos: usize) {
-    unsafe {
-        *(0xb8000 as *mut u8).offset(pos as isize * 2) = c;
-    }
 }
