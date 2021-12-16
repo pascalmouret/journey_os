@@ -4,6 +4,7 @@ SECTIONS
 {
 	/* Begin putting sections at 1 MiB so we have 14 MiBs of memory available. */
 	. = 0x00100000;
+	KERNEL_START = .;
 
 	/* We're the multiboot header and all boot sections at the very beginning of memory. This
 	 is only necessary for the multiboot header, but this makes it easier to debug the early boot
@@ -38,5 +39,6 @@ SECTIONS
 	{
 		*(COMMON)
 		*(.bss .bss.*)
+		KERNEL_END = .;
 	}
 }

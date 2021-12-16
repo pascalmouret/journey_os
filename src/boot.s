@@ -64,12 +64,16 @@ we will:
 */
 .section .init
 start:
+    /* push multiboot info onto stack */
+    mov $stack_top, %esp
+    push %eax
+    push %ebx
 setup_pages:
     /* Clear the memory from 0x1000 to 0x4FFF */
     mov $0x1000, %edi           # Set 0x1000 in destination register
     mov %edi, %cr3              # Set page directory pointer
     mov $0, %eax                # Empty EAX for stosd
-    mov $0x4096, %ecx           # Set rep counter to 4096 (l = 4 bytes, so the size of four tables)
+    mov $4096, %ecx             # Set rep counter to 4096 (l = 4 bytes, so the size of four tables)
     rep stosl                   # Clear memory
 
     /* Set up page forwarding all the way down with present and r/w bits set */
@@ -117,12 +121,13 @@ start64:
     mov %ax, %gs
     mov %ax, %ss
 
-    /* Initialize stack */
-    mov $stack_top, %esp
+    /* Since I can't get passing to main to work... magic memory address */
+    pop (0x5000)
 
 	/*
     Now that we are in long mode and have a well defined stack, we can
     move into rust code.
+    Note that we already pushed the multiboot info onto the stack at the very beginning.
 	*/
 	call kernel_main
 

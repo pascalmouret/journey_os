@@ -2,7 +2,7 @@ use core;
 use spin::Mutex;
 use lazy_static::lazy_static;
 
-const VGA_BUFFER_ADDR: u64 = 0xb8000;
+const VGA_BUFFER_ADDR: usize = 0xb8000;
 const COLUMNS: usize = 80;
 const ROWS: usize = 25;
 
