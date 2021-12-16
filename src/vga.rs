@@ -10,6 +10,7 @@ lazy_static! {
     pub static ref CONSOLE: Mutex<Console> = Mutex::new(Console::new());
 }
 
+#[allow(dead_code)]
 #[repr(u8)]
 pub enum Color {
     Black = 0,
@@ -30,6 +31,7 @@ pub enum Color {
     White = 15,
 }
 
+#[allow(dead_code)] // we never read the color, only store it in the buffer
 #[repr(transparent)]
 #[derive(Copy, Clone)]
 pub struct ColorCode {

@@ -1,9 +1,6 @@
 pub const MB_MAGIC_ADDR: usize = 0x5004;
 const MB_INFO_PTR_ADDR: usize = 0x5000;
 
-use core::fmt::Write;
-use crate::vga::CONSOLE;
-
 /*
 The format of the Multiboot information structure (as defined so far) follows:
 
@@ -84,7 +81,8 @@ pub struct MultibootInfo {
     pub color_info: [u8; 6],
 }
 
-#[derive(Debug, PartialEq)]
+#[allow(dead_code)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(u32)]
 pub enum MemoryKind {
     Unknown = 0,
@@ -110,7 +108,6 @@ impl MultibootInfo {
     }
 
     pub unsafe fn memory_map() -> &'static MemoryMapEntry {
-        write!(CONSOLE.lock(), "Getting memory map at {:X}\n", MultibootInfo::get_ref().mmap_addr);
         &*((MultibootInfo::get_ref().mmap_addr) as *const MemoryMapEntry)
     }
 }

@@ -6,7 +6,7 @@
 
 use core::panic::PanicInfo;
 use core::fmt::Write;
-use crate::multiboot::{MemoryMapEntry, MB_MAGIC_ADDR};
+use crate::multiboot::MB_MAGIC_ADDR;
 
 mod vga;
 mod multiboot;
@@ -25,24 +25,17 @@ pub extern "C" fn kernel_main() -> ! {
     let magic = unsafe { *(MB_MAGIC_ADDR as *const u32) };
 
     if magic != 0x2BADB002 {
-        write!(vga::CONSOLE.lock(), "Magic number does not match. Expected: 0x2BADB002, Found: {:X}", magic).unwrap();
+        panic!("Magic number does not match. Expected: 0x2BADB002, Found: {:X}", magic);
+    } else {
+        write!(vga::CONSOLE.lock(), "Hello Rust!\n").unwrap();
     }
 
-    let mut current = unsafe { Some(multiboot::MultibootInfo::memory_map()) };
-    loop {
-        match current {
-            Some(entry) => {
-                write!(vga::CONSOLE.lock(), "{:X} {:X} {:X} {:?}\n", entry.size, entry.base, entry.limit, entry.kind);
-                current = unsafe { entry.next() };
-            }
-            None => break
-        }
-    }
+    write!(vga::CONSOLE.lock(), "{:X} bytes of memory mapped.\n", mem::frames::FRAME_MAP.lock().total_memory_bytes()).unwrap();
 
     if mem::frames::FRAME_MAP.lock().index_is_free(1) {
-        write!(vga::CONSOLE.lock(), "Free\n");
+        write!(vga::CONSOLE.lock(), "Free\n").unwrap();
     } else {
-        write!(vga::CONSOLE.lock(), "Used\n");
+        write!(vga::CONSOLE.lock(), "Used\n").unwrap();
     }
 
     loop {}
