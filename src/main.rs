@@ -5,7 +5,6 @@
 #![feature(asm)]
 
 use core::panic::PanicInfo;
-use core::fmt::Write;
 use crate::multiboot::MB_MAGIC_ADDR;
 
 mod vga;
@@ -16,7 +15,7 @@ global_asm!(include_str!("boot.s"), options(att_syntax));
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    write!(vga::CONSOLE.lock(), "{}", info).unwrap();
+    println!("{}", info);
     loop {};
 }
 
@@ -27,15 +26,15 @@ pub extern "C" fn kernel_main() -> ! {
     if magic != 0x2BADB002 {
         panic!("Magic number does not match. Expected: 0x2BADB002, Found: {:X}", magic);
     } else {
-        write!(vga::CONSOLE.lock(), "Hello Rust!\n").unwrap();
+        println!("Hello Rust!");
     }
 
-    write!(vga::CONSOLE.lock(), "{:X} bytes of memory mapped.\n", mem::frames::FRAME_MAP.lock().total_memory_bytes()).unwrap();
+    println!("{:X} bytes of memory mapped.", mem::frames::FRAME_MAP.lock().total_memory_bytes());
 
     if mem::frames::FRAME_MAP.lock().index_is_free(1) {
-        write!(vga::CONSOLE.lock(), "Free\n").unwrap();
+        println!("Free");
     } else {
-        write!(vga::CONSOLE.lock(), "Used\n").unwrap();
+        println!("Used");
     }
 
     loop {}

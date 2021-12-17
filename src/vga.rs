@@ -10,6 +10,22 @@ lazy_static! {
     pub static ref CONSOLE: Mutex<Console> = Mutex::new(Console::new());
 }
 
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::vga::_print(format_args!($($arg)*)));
+}
+
+#[macro_export]
+macro_rules! println {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+}
+
+pub fn _print(args: core::fmt::Arguments) {
+    use core::fmt::Write;
+    CONSOLE.lock().write_fmt(args).unwrap();
+}
+
 #[allow(dead_code)]
 #[repr(u8)]
 pub enum Color {
