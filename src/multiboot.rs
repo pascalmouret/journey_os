@@ -1,6 +1,3 @@
-pub const MB_MAGIC_ADDR: usize = 0x5004;
-const MB_INFO_PTR_ADDR: usize = 0x5000;
-
 /*
 The format of the Multiboot information structure (as defined so far) follows:
 
@@ -81,6 +78,14 @@ pub struct MultibootInfo {
     pub color_info: [u8; 6],
 }
 
+#[repr(C, packed)]
+pub struct MemoryMapEntry {
+    pub size: u32,
+    pub base: u64,
+    pub limit: u64,
+    pub kind: MemoryKind,
+}
+
 #[allow(dead_code)]
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(u32)]
@@ -93,33 +98,33 @@ pub enum MemoryKind {
     Damaged = 5,
 }
 
-#[repr(C, packed)]
-pub struct MemoryMapEntry {
-    pub size: u32,
-    pub base: u64,
-    pub limit: u64,
-    pub kind: MemoryKind,
+pub struct MemoryMapPointer {
+    buffer_end: usize,
+    pub entry: &'static MemoryMapEntry,
 }
 
 impl MultibootInfo {
-    pub unsafe fn get_ref() -> &'static MultibootInfo {
-        let mem_ptr = *(MB_INFO_PTR_ADDR as *const u32);
-        &*(mem_ptr as *const MultibootInfo)
-    }
-
-    pub unsafe fn memory_map() -> &'static MemoryMapEntry {
-        &*((MultibootInfo::get_ref().mmap_addr) as *const MemoryMapEntry)
+    pub unsafe fn memory_map(&self) -> MemoryMapPointer {
+        // TODO: check mmap flag
+        MemoryMapPointer {
+            buffer_end: (self.mmap_addr + self.mmap_size) as usize,
+            entry: &*(self.mmap_addr as *const MemoryMapEntry),
+        }
     }
 }
 
-impl MemoryMapEntry {
-    pub fn next(&self) -> Option<&MemoryMapEntry> {
+impl MemoryMapPointer {
+    pub fn next(&self) -> Option<MemoryMapPointer> {
         // we have to add an additional four bytes to account for the size field
-        let next = (self as *const MemoryMapEntry as usize) + self.size as usize + 4;
-        let mb = unsafe { MultibootInfo::get_ref() };
+        let next = (self.entry as *const MemoryMapEntry as usize) + self.entry.size as usize + 4;
 
-        if mb.mmap_size > (next - (mb.mmap_addr as usize)) as u32 {
-            unsafe { Some(&*(next as *const MemoryMapEntry)) }
+        if self.buffer_end > next {
+            Some(
+                MemoryMapPointer {
+                    buffer_end: self.buffer_end,
+                    entry: unsafe { &*(next as *const MemoryMapEntry) }
+                }
+            )
         } else {
             None
         }

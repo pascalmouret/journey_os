@@ -5,7 +5,7 @@
 #![feature(asm)]
 
 use core::panic::PanicInfo;
-use crate::multiboot::MB_MAGIC_ADDR;
+use crate::multiboot::MultibootInfo;
 
 mod vga;
 mod multiboot;
@@ -19,16 +19,23 @@ fn panic(info: &PanicInfo) -> ! {
     loop {};
 }
 
-#[no_mangle]
-pub extern "C" fn kernel_main() -> ! {
-    let magic = unsafe { *(MB_MAGIC_ADDR as *const u32) };
+#[repr(C, packed)]
+pub struct BootData {
+    mb_magic: u32,
+    mb_info: &'static MultibootInfo,
+    kernel_start: usize,
+    kernel_end: usize,
+}
 
-    if magic != 0x2BADB002 {
-        panic!("Magic number does not match. Expected: 0x2BADB002, Found: {:X}", magic);
+#[no_mangle]
+pub extern "cdecl" fn kernel_main(boot_data: &BootData) -> ! {
+    if boot_data.mb_magic != 0x2BADB002 {
+        panic!("Magic number does not match. Expected: 0x2BADB002, Found: {:X}", boot_data.mb_magic);
     } else {
         println!("Hello Rust!");
     }
 
+    unsafe { mem::frames::FRAME_MAP.lock().init(boot_data) };
     println!("{:X} bytes of memory mapped.", mem::frames::FRAME_MAP.lock().total_memory_bytes());
 
     if mem::frames::FRAME_MAP.lock().index_is_free(1) {

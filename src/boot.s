@@ -53,6 +53,14 @@ gdt_pointer:
 	.word GDT_SIZE - 1
 	.quad gdt
 
+boot_data:
+mb_magic:
+    .long 0
+mb_data_ptr:
+    .quad 0
+    .quad KERNEL_START
+    .quad KERNEL_END
+
 /*
 Actual boot script. Since this is a multiboot kernel, we start in 32bit mode. Starting for that,
 we will:
@@ -64,10 +72,9 @@ we will:
 */
 .section .init
 start:
-    /* push multiboot info onto stack */
-    mov $stack_top, %esp
-    push %eax
-    push %ebx
+    /* preserve multiboot data */
+    mov %eax, (mb_magic)
+    mov %ebx, (mb_data_ptr)
 setup_pages:
     /* Clear the memory from 0x1000 to 0x4FFF */
     mov $0x1000, %edi           # Set 0x1000 in destination register
@@ -121,8 +128,11 @@ start64:
     mov %ax, %gs
     mov %ax, %ss
 
-    /* Since I can't get passing to main to work... magic memory address */
-    pop (0x5000)
+    /* initialise stack */
+    mov $stack_top, %rsp
+
+    /* rust call argument */
+    mov $boot_data, %rdi
 
 	/*
     Now that we are in long mode and have a well defined stack, we can
