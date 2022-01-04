@@ -30,7 +30,7 @@ pub struct BootData {
 #[no_mangle]
 pub extern "cdecl" fn kernel_main(boot_data: &BootData) -> ! {
     if boot_data.mb_magic != 0x2BADB002 {
-        panic!("Magic number does not match. Expected: 0x2BADB002, Found: {:X}", boot_data.mb_magic);
+        panic!("Magic number does not match. Expected: 0x2BADB002, Found: {:X}", { boot_data.mb_magic });
     } else {
         println!("Hello Rust!");
     }

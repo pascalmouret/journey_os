@@ -7,7 +7,7 @@ use spin::Mutex;
 use crate::BootData;
 
 lazy_static! {
-    pub static ref FRAME_MAP: Mutex<FrameMap> = unsafe { Mutex::new(FrameMap { frames: &mut [] }) };
+    pub static ref FRAME_MAP: Mutex<FrameMap> = Mutex::new(FrameMap { frames: &mut [] });
 }
 
 pub struct FrameMap {
@@ -16,8 +16,6 @@ pub struct FrameMap {
 
 // TODO: optimize setting blocks
 impl FrameMap {
-    // TODO: mark final pages as used if they don't exist
-    // TODO: mark gaps in map as used
     // TODO: setup paging as needed for frame map
     // TODO: allow only one init
     pub unsafe fn init(&mut self, boot_data: &BootData) {
@@ -26,28 +24,24 @@ impl FrameMap {
             FrameMap::required_frame_bytes(boot_data.mb_info.memory_map()),
         );
 
+        self.frames.fill(u8::MAX);
+
         let mut current = Some(boot_data.mb_info.memory_map());
         loop {
             match current {
                 Some(pointer) => {
-                    let mut first = pointer.entry.base as usize / PAGE_SIZE;
-                    if pointer.entry.base as usize % PAGE_SIZE != 0 {
-                        first += 1
-                    }
-                    let mut count = pointer.entry.limit as usize / PAGE_SIZE;
-                    if pointer.entry.limit as usize % PAGE_SIZE != 0 {
-                        count += 1;
-                    }
+                    if { pointer.entry.kind } == MemoryKind::Usable {
+                        let mut first = pointer.entry.base as usize / PAGE_SIZE;
+                        if pointer.entry.base as usize % PAGE_SIZE != 0 {
+                            first += 1
+                        }
+                        let mut count = pointer.entry.limit as usize / PAGE_SIZE;
+                        if pointer.entry.limit as usize % PAGE_SIZE != 0 {
+                            count += 1;
+                        }
 
-                    if first > self.frames.len() {
-                        break;
-                    }
-
-                    for i in 0..count.max(self.frames.len()) {
-                        if { pointer.entry.kind } == MemoryKind::Usable {
+                        for i in 0..count.max(self.frames.len()) {
                             self.free_index(i + first);
-                        } else {
-                            self.alloc_index(i + first);
                         }
                     }
                     current = pointer.next();
