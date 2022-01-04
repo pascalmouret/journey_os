@@ -3,13 +3,18 @@
 #![no_main]
 #![feature(global_asm)]
 #![feature(asm)]
+#![feature(custom_test_frameworks)]
+#![test_runner(crate::os_test::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
 use crate::multiboot::MultibootInfo;
+use macros::os_test;
 
 mod vga;
 mod multiboot;
 mod mem;
+mod os_test;
 
 global_asm!(include_str!("boot.s"), options(att_syntax));
 
@@ -38,11 +43,13 @@ pub extern "cdecl" fn kernel_main(boot_data: &BootData) -> ! {
     unsafe { mem::frames::FRAME_MAP.lock().init(boot_data) };
     println!("{:X} bytes of memory mapped.", mem::frames::FRAME_MAP.lock().total_memory_bytes());
 
-    if mem::frames::FRAME_MAP.lock().index_is_free(1) {
-        println!("Free");
-    } else {
-        println!("Used");
-    }
+    #[cfg(test)]
+    test_main();
 
     loop {}
+}
+
+#[os_test]
+fn test_test() {
+    assert_eq!(1, 1);
 }
