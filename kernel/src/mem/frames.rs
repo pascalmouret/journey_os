@@ -5,6 +5,7 @@ use crate::multiboot::{MemoryKind, MemoryMapPointer};
 use lazy_static::lazy_static;
 use spin::Mutex;
 use crate::BootData;
+use macros::os_test;
 
 lazy_static! {
     pub static ref FRAME_MAP: Mutex<FrameMap> = Mutex::new(FrameMap { frames: &mut [] });
@@ -93,19 +94,19 @@ impl FrameMap {
     fn free_index(&mut self, frame: usize) {
         let byte = frame / 8;
         let offset = frame % 8;
-        self.frames[byte] = self.frames[byte] | (0x1 << offset)
+        self.frames[byte] = self.frames[byte] & ((0x1 << offset) ^ 0xFF)
     }
 
     fn alloc_index(&mut self, frame: usize) {
         let byte = frame / 8;
         let offset = frame % 8;
-        self.frames[byte] = self.frames[byte] & ((0x1 << offset) & 0xFF)
+        self.frames[byte] = self.frames[byte] | (0x1 << offset)
     }
 
     pub fn index_is_free(&self, frame: usize) -> bool {
         let byte = frame / 8;
         let offset = frame % 8;
-        self.frames[byte] & ((0x1 << offset) & 0xFF) > 0
+        self.frames[byte] & (0x1 << offset) == 0
     }
 
     pub fn total_memory_bytes(&self) -> usize {
@@ -113,5 +114,22 @@ impl FrameMap {
     }
 }
 
+#[os_test]
+fn mem_frames_free_index() {
+    let mut map = FRAME_MAP.lock();
 
+    for i in 0..16 {
+        map.free_index(i);
+        assert_eq!(map.index_is_free(i), true)
+    }
+}
 
+#[os_test]
+fn mem_frames_alloc_index() {
+    let mut map = FRAME_MAP.lock();
+
+    for i in 0..16 {
+        map.alloc_index(i);
+        assert_eq!(map.index_is_free(i), false)
+    }
+}

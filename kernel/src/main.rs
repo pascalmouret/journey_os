@@ -48,15 +48,10 @@ pub extern "cdecl" fn kernel_main(boot_data: &BootData) -> ! {
     }
 
     unsafe { mem::frames::FRAME_MAP.lock().init(boot_data) };
-    println!("{:X} bytes of memory mapped.", mem::frames::FRAME_MAP.lock().total_memory_bytes());
+    println!("{} KiBs of memory mapped.", mem::frames::FRAME_MAP.lock().total_memory_bytes() / 1024);
 
     #[cfg(test)]
     test_main();
 
     loop {}
-}
-
-#[os_test]
-fn test_test() {
-    assert_eq!(1, 2);
 }
