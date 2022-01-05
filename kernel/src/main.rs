@@ -10,10 +10,11 @@
 use core::panic::PanicInfo;
 use crate::multiboot::MultibootInfo;
 use macros::os_test;
+
 #[cfg(test)]
 use crate::os_test::test_panic;
 
-mod vga;
+mod io;
 mod multiboot;
 mod mem;
 mod os_test;
@@ -22,10 +23,11 @@ global_asm!(include_str!("boot.s"), options(att_syntax));
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    #[cfg(test)]
-    test_panic(info);
-
     println!("{}", info);
+
+    #[cfg(test)]
+    test_panic();
+
     loop {};
 }
 
@@ -56,5 +58,5 @@ pub extern "cdecl" fn kernel_main(boot_data: &BootData) -> ! {
 
 #[os_test]
 fn test_test() {
-    assert_eq!(1, 1);
+    assert_eq!(1, 2);
 }

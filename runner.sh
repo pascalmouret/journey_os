@@ -10,6 +10,7 @@ qemu-system-x86_64 \
   -cdrom $SCRIPT_DIR/target/rustos.iso \
   -device VGA \
   -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
-  -monitor stdio
+  -serial stdio
+#  -monitor stdio \
 
 [ $? -eq $SUCCESS_CODE ] && exit 0 || exit 1

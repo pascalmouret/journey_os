@@ -1,8 +1,10 @@
 #[cfg(test)]
 pub mod os_test {
-    use core::panic::PanicInfo;
+    use crate::io::port::Port;
+    use crate::io::stdout::STD_OUT;
+    use crate::io::serial::COM1;
 
-    const ISA_PORT: usize = 0xF4;
+    const ISA_PORT: u16 = 0xF4;
     const SUCCESS_CODE: u32 = 42;
     const FAILURE_CODE: u32 = 1;
 
@@ -12,6 +14,7 @@ pub mod os_test {
     }
 
     pub fn test_runner(tests: &[&OSTest]) {
+        STD_OUT.lock().set(&COM1);
         crate::println!("Running tests...");
         for test in tests {
             crate::print!("{}...   ", test.name);
@@ -21,20 +24,13 @@ pub mod os_test {
         exit(true);
     }
 
-    pub fn test_panic(info: &PanicInfo) {
+    pub fn test_panic() {
         exit(false);
     }
 
     fn exit(success: bool) {
-        let code = if success { SUCCESS_CODE } else { FAILURE_CODE };
-        unsafe {
-            asm! {
-            "OUT %eax, %dx",
-            in("dx") ISA_PORT,
-            in("eax") code,
-            options(att_syntax),
-            }
-        }
+        let port = unsafe { Port::open(ISA_PORT) };
+        port.write(if success { SUCCESS_CODE } else { FAILURE_CODE });
     }
 }
 
