@@ -1,8 +1,8 @@
 #![feature(panic_info_message)]
 #![no_std]
 #![no_main]
-#![feature(global_asm)]
 #![feature(asm)]
+#![feature(global_asm)]
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::os_test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
@@ -10,6 +10,8 @@
 use core::panic::PanicInfo;
 use crate::multiboot::MultibootInfo;
 use macros::os_test;
+#[cfg(test)]
+use crate::os_test::test_panic;
 
 mod vga;
 mod multiboot;
@@ -20,6 +22,9 @@ global_asm!(include_str!("boot.s"), options(att_syntax));
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    #[cfg(test)]
+    test_panic(info);
+
     println!("{}", info);
     loop {};
 }
