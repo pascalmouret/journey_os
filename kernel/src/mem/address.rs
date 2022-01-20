@@ -35,24 +35,4 @@ impl VirtualAddress {
     pub fn l3_index(&self) -> usize { self.0 >> L3_SHIFT & INDEX_MASK }
     pub fn l2_index(&self) -> usize { self.0 >> L2_SHIFT & INDEX_MASK }
     pub fn l1_index(&self) -> usize { self.0 >> L1_SHIFT & INDEX_MASK }
-
-    // TODO: remove
-    unsafe fn to_physical_address(&self, table: &Table<Level4>) -> PhysicalAddress {
-        table
-            .get_next(self.0 >> 39).unwrap()
-            .get_next(self.0 >> 30).unwrap()
-            .get_next(self.0 >> 21).unwrap()
-            .get_address(self.0 >> 12).unwrap()
-    }
-}
-
-#[os_test]
-fn mem_paging_virtual_address_to_physical_address() {
-    let table = unsafe { &*(0x1000 as *const Table<Level4>) };
-    let kernel_address = 0x100000;
-
-    assert_eq!(
-        unsafe { (VirtualAddress { 0: kernel_address }).to_physical_address(table).0 },
-        kernel_address,
-    )
 }

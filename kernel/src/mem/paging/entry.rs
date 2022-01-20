@@ -19,7 +19,6 @@ impl Entry {
     }
 
     pub fn is_present(&self) -> bool {
-        crate::println!("entry: {}", self.0);
         self.0 & PRESENT_FLAG > 0
     }
 

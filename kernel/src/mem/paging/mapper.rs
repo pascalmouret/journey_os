@@ -1,6 +1,6 @@
 use macros::os_test;
 use crate::mem::address::VirtualAddress;
-use crate::mem::frames::{Frame, FrameSize};
+use crate::mem::frames::{Frame, FRAME_MAP, FrameSize};
 use crate::mem::paging::table::{Level4, Table};
 
 pub unsafe fn map_frame(frame: &Frame, target: &VirtualAddress, table: &mut Table<Level4>) {

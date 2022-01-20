@@ -76,27 +76,16 @@ start:
     mov %eax, (mb_magic)
     mov %ebx, (mb_data_ptr)
 setup_pages:
-    /* Clear the memory from 0x1000 to 0x4FFF */
+    /* Clear the memory from 0x1000 to 0x2FFF */
     mov $0x1000, %edi           # Set 0x1000 in destination register
     mov %edi, %cr3              # Set page directory pointer
     mov $0, %eax                # Empty EAX for stosd
-    mov $4096, %ecx             # Set rep counter to 4096 (l = 4 bytes, so the size of four tables)
+    mov $2048, %ecx             # Set rep counter (l = 4 bytes, so the size of two tables)
     rep stosl                   # Clear memory
 
-    /* Set up page forwarding all the way down with present and r/w bits set */
+    /* Setup a HUGE page for the first GiB */
     movl $0x2003, (0x1000)
-    movl $0x3003, (0x2000)
-    movl $0x4003, (0x3000)
-
-    /* Setup page table for first two MiBs (one table) */
-    mov $0x4000, %edi           # Base of page table
-    mov $3, %ebx                # 0 index page with bits present and r/w
-    mov $512, %ecx              # 512 entries in loop counter
-set_entry:
-    mov %ebx, (%edi)            # Write current table entry
-    add $0x1000, %ebx           # Add one page offset to current EBX
-    add $8, %edi                # Set memory address for next page entry
-    loop (set_entry)            # Go back to write entry
+    movl $0x83, (0x2000)
 
     /* Enable PAE (bit 5 of cr4) */
     mov %cr4, %eax

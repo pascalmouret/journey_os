@@ -74,12 +74,9 @@ impl <L: HierarchicalLevel> Table<L> {
     }
 
     pub fn get_or_create_next(&mut self, index: usize) -> &mut Table<L::NextLevel> {
-        crate::println!("index: {}", index);
         if self.entries[index].is_present() {
-            crate::println!("Present.");
             self.get_next_mut(index).unwrap()
         } else {
-            crate::println!("Not present.");
             self.create_next(index)
         }
     }
