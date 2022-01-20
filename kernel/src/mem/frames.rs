@@ -1,48 +1,74 @@
-const PAGE_SIZE: usize = 4096;
-
 use core::slice::from_raw_parts_mut;
-use crate::multiboot::{MemoryKind, MemoryMapPointer};
 use lazy_static::lazy_static;
 use spin::Mutex;
-use crate::BootData;
 use macros::os_test;
 
+use crate::BootData;
+use crate::multiboot::{MemoryKind, MemoryMapPointer};
+use crate::mem::address::PhysicalAddress;
+
+const FRAME_SIZE: usize = 4096;
+
 lazy_static! {
-    pub static ref FRAME_MAP: Mutex<FrameMap> = Mutex::new(FrameMap { frames: &mut [] });
+    pub static ref FRAME_MAP: Mutex<FrameMap> = Mutex::new(FrameMap { total_frames: 0, frames: &mut [] });
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum FrameSize {
+    SMALL,
+    LARGE,
+    HUGE,
+}
+
+pub struct Frame {
+    pub start_address: PhysicalAddress,
+    pub free: bool,
+    pub size: FrameSize,
+}
+
+impl Frame {
+    pub fn for_address(address: PhysicalAddress) -> Frame {
+        let frame = address.data() >> 12; // shift away address offset
+        let byte = frame / 8;
+        let offset = frame % 8;
+        Frame {
+            start_address: PhysicalAddress::new(frame << 12),
+            free: FRAME_MAP.lock().frames[byte as usize] & (0x1 << offset) == 0,
+            size: FrameSize::SMALL,
+        }
+    }
 }
 
 pub struct FrameMap {
+    total_frames: usize,
     frames: &'static mut [u8],
 }
 
 // TODO: optimize setting blocks
 impl FrameMap {
     // TODO: setup paging as needed for frame map
-    // TODO: allow only one init
     pub unsafe fn init(&mut self, boot_data: &BootData) {
-        self.frames = from_raw_parts_mut(
-            ((boot_data.kernel_end / PAGE_SIZE + 1) * PAGE_SIZE) as *mut u8,
-            FrameMap::required_frame_bytes(boot_data.mb_info.memory_map()),
+        self.create_buffer(
+            PhysicalAddress::new((boot_data.kernel_end / FRAME_SIZE + 1) * FRAME_SIZE),
+            boot_data.mb_info.memory_map(),
         );
-
-        self.frames.fill(u8::MAX);
 
         let mut current = Some(boot_data.mb_info.memory_map());
         loop {
             match current {
                 Some(pointer) => {
                     if { pointer.entry.kind } == MemoryKind::Usable {
-                        let mut first = pointer.entry.base as usize / PAGE_SIZE;
-                        if pointer.entry.base as usize % PAGE_SIZE != 0 {
+                        let mut first = pointer.entry.base as usize / FRAME_SIZE;
+                        if pointer.entry.base as usize % FRAME_SIZE != 0 {
                             first += 1
                         }
-                        let mut count = pointer.entry.limit as usize / PAGE_SIZE;
-                        if pointer.entry.limit as usize % PAGE_SIZE != 0 {
+                        let mut count = pointer.entry.limit as usize / FRAME_SIZE;
+                        if pointer.entry.limit as usize % FRAME_SIZE != 0 {
                             count += 1;
                         }
 
                         for i in 0..count.max(self.frames.len()) {
-                            self.free_index(i + first);
+                            self.set_frame(i + first, true);
                         }
                     }
                     current = pointer.next();
@@ -51,27 +77,16 @@ impl FrameMap {
             }
         }
 
-        let frames_used = self.frames.len() / PAGE_SIZE + 1;
-        let frame_index = (self as *const FrameMap as usize) / PAGE_SIZE;
-        for i in 0..frames_used {
-            self.alloc_index(i + frame_index);
-        }
-
-        let mut kernel_first = boot_data.kernel_start / PAGE_SIZE;
-        if boot_data.kernel_start % PAGE_SIZE != 0 {
-            kernel_first += 1
-        }
-        let mut kernel_count = boot_data.kernel_end / PAGE_SIZE;
-        if boot_data.kernel_end % PAGE_SIZE != 0 {
-            kernel_count += 1;
-        }
-
-        for i in 0..kernel_count {
-            self.alloc_index(i + kernel_first)
+        // mark everything until end of frame map as used
+        let frames_used = self.frames.len() / FRAME_SIZE + 1;
+        let frame_index = (self as *const FrameMap as usize) / FRAME_SIZE;
+        let last_frame = frame_index + frames_used;
+        for i in 0..last_frame {
+            self.set_frame(i, false);
         }
     }
 
-    fn required_frame_bytes(memory_map: MemoryMapPointer) -> usize {
+    unsafe fn create_buffer(&mut self, start_address: PhysicalAddress, memory_map: MemoryMapPointer) {
         let mut last_address: usize = 0;
 
         let mut current = Some(memory_map);
@@ -87,49 +102,75 @@ impl FrameMap {
             }
         }
 
-        let last_page = last_address / PAGE_SIZE + usize::from(last_address % PAGE_SIZE != 0);
-        last_page / 8 + usize::from(last_page % PAGE_SIZE != 0)
+        self.total_frames = last_address / FRAME_SIZE + usize::from(last_address % FRAME_SIZE != 0);
+        self.frames = from_raw_parts_mut(
+            start_address.data() as *mut u8,
+            self.total_frames / 8 + usize::from(self.total_frames % FRAME_SIZE != 0),
+        );
+
+        self.frames.fill(u8::MAX);
     }
 
-    fn free_index(&mut self, frame: usize) {
-        let byte = frame / 8;
-        let offset = frame % 8;
-        self.frames[byte] = self.frames[byte] & ((0x1 << offset) ^ 0xFF)
+    fn set_frame(&mut self, index: usize, free: bool) {
+        assert!(index <= self.total_frames, "Frame outside expected range.");
+        let byte = index / 8;
+        let offset = index % 8;
+        if free {
+            self.frames[byte] = self.frames[byte] & ((0x1 << offset) ^ 0xFF)
+        } else {
+            self.frames[byte] = self.frames[byte] | (0x1 << offset)
+        }
     }
 
-    fn alloc_index(&mut self, frame: usize) {
-        let byte = frame / 8;
-        let offset = frame % 8;
-        self.frames[byte] = self.frames[byte] | (0x1 << offset)
-    }
-
-    pub fn index_is_free(&self, frame: usize) -> bool {
-        let byte = frame / 8;
-        let offset = frame % 8;
-        self.frames[byte] & (0x1 << offset) == 0
+    // TODO: make this something resembling performant
+    // TODO: allow collecting multiple frames
+    pub fn alloc_free(&mut self) -> Frame {
+        let mut index = 0;
+        while self.frames[index] == u8::MAX {
+            index += 1
+        }
+        let frame = index * 8 + self.frames[index].trailing_ones() as usize;
+        self.set_frame(frame, false);
+        Frame {
+            start_address: PhysicalAddress::new(frame << 12),
+            free: false,
+            size: FrameSize::SMALL,
+        }
     }
 
     pub fn total_memory_bytes(&self) -> usize {
-        self.frames.len() * PAGE_SIZE * 8
+        self.frames.len() * FRAME_SIZE * 8
     }
 }
 
 #[os_test]
-fn mem_frames_free_index() {
-    let mut map = FRAME_MAP.lock();
+fn mem_frames_set_index() {
+    // this is fine since the first MiB shouldn't be used anyway
 
     for i in 0..16 {
-        map.free_index(i);
-        assert_eq!(map.index_is_free(i), true)
+        FRAME_MAP.lock().set_frame(i, true);
+        assert_eq!(Frame::for_address(PhysicalAddress::new(i << 12)).free, true)
+    }
+
+    for i in 0..16 {
+        FRAME_MAP.lock().set_frame(i, false);
+        assert_eq!(Frame::for_address(PhysicalAddress::new(i << 12)).free, false)
     }
 }
 
 #[os_test]
-fn mem_frames_alloc_index() {
-    let mut map = FRAME_MAP.lock();
+fn mem_frames_alloc_free() {
+    let mut index = 0;
 
-    for i in 0..16 {
-        map.alloc_index(i);
-        assert_eq!(map.index_is_free(i), false)
+    while !(Frame::for_address(PhysicalAddress::new(index << 12)).free) {
+        index += 1;
     }
+
+    let alloc_frame = FRAME_MAP.lock().alloc_free();
+    assert_eq!(
+        alloc_frame.start_address.data(),
+        index << 12,
+    );
+
+    assert!(!Frame::for_address(alloc_frame.start_address).free)
 }

@@ -17,9 +17,9 @@ pub mod os_test {
         STD_OUT.lock().set(&COM1);
         crate::println!("Running tests...");
         for test in tests {
-            crate::print!("{}...   ", test.name);
+            crate::print!("{}...", test.name);
             (test.test)();
-            crate::print!("[ok]\n")
+            crate::print!("ok\n")
         }
         exit(true);
     }

@@ -9,7 +9,6 @@
 
 use core::panic::PanicInfo;
 use crate::multiboot::MultibootInfo;
-use macros::os_test;
 
 #[cfg(test)]
 use crate::os_test::test_panic;
