@@ -1,5 +1,5 @@
 [package]
-name = "rust-os"
+name = "journey-os"
 version = "0.1.0"
 authors = ["Pascal Mouret <pascal.mouret@me.com>"]
 edition = "2018"

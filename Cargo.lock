@@ -3,6 +3,15 @@
 version = 3
 
 [[package]]
+name = "journey-os"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "macros",
+ "spin 0.9.2",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -45,15 +54,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47aa80447ce4daf1717500037052af176af5d38cc3e571d9ec1c7353fc10c87d"
 dependencies = [
  "proc-macro2",
-]
-
-[[package]]
-name = "rust-os"
-version = "0.1.0"
-dependencies = [
- "lazy_static",
- "macros",
- "spin 0.9.2",
 ]
 
 [[package]]
