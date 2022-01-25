@@ -43,7 +43,7 @@ pub extern "cdecl" fn kernel_main(boot_data: &BootData) -> ! {
     if boot_data.mb_magic != 0x2BADB002 {
         panic!("Magic number does not match. Expected: 0x2BADB002, Found: {:X}", { boot_data.mb_magic });
     } else {
-        println!("Journey OS 0.1.0!");
+        println!("Journey OS 0.1.0");
     }
 
     unsafe { mem::frames::FRAME_MAP.lock().init(boot_data) };

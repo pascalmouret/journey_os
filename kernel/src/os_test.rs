@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod os_test {
     use crate::io::port::Port;
-    use crate::io::stdout::STD_OUT;
+    use crate::io::output::STD_OUT;
     use crate::io::serial::COM1;
 
     const ISA_PORT: u16 = 0xF4;

@@ -20,7 +20,7 @@ pub struct SerialPort {
     // scratch: Port,
 }
 
-impl crate::io::stdout::StdOutWriter for SerialPort {
+impl crate::io::output::StdOutWriter for SerialPort {
     fn write(&mut self, s: &str) {
         self.write_str(s);
     }

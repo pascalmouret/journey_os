@@ -48,10 +48,11 @@ pub struct FrameMap {
 impl FrameMap {
     // TODO: setup paging as needed for frame map
     pub unsafe fn init(&mut self, boot_data: &BootData) {
-        self.create_buffer(
-            PhysicalAddress::new((boot_data.kernel_end / FRAME_SIZE + 1) * FRAME_SIZE),
-            boot_data.mb_info.memory_map(),
-        );
+        let start_address = PhysicalAddress::new((boot_data.kernel_end / FRAME_SIZE + 1) * FRAME_SIZE);
+
+        crate::kprintln!("Creating frame map starting at 0x{:X}.", start_address.data());
+
+        self.create_buffer(start_address, boot_data.mb_info.memory_map());
 
         let mut current = Some(boot_data.mb_info.memory_map());
         loop {

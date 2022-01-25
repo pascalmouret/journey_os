@@ -66,7 +66,7 @@ pub struct Console {
     buffer: &'static mut Buffer,
 }
 
-impl crate::io::stdout::StdOutWriter for Console {
+impl crate::io::output::StdOutWriter for Console {
     fn write(&mut self, s: &str) where Self: Sized {
         self.write(s);
     }
