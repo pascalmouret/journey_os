@@ -5,7 +5,7 @@ use crate::io::serial::COM1;
 
 lazy_static! {
     pub static ref STD_OUT: Mutex<Output> = Mutex::new(Output::new(&CONSOLE));
-    pub static ref KERNEL_OUT: Mutex<Output> = Mutex::new(Output::new(&COM1));
+    pub static ref LOG_OUT: Mutex<Output> = Mutex::new(Output::new(&COM1));
 }
 
 pub trait StdOutWriter {
@@ -51,17 +51,17 @@ pub fn _print(args: core::fmt::Arguments) {
 }
 
 #[macro_export]
-macro_rules! kprint {
-    ($($arg:tt)*) => ($crate::io::output::_kprint(format_args!($($arg)*)));
+macro_rules! log {
+    ($($arg:tt)*) => ($crate::io::output::_log(format_args!($($arg)*)));
 }
 
 #[macro_export]
-macro_rules! kprintln {
+macro_rules! logln {
     () => ($crate::kprint!("\n"));
-    ($($arg:tt)*) => ($crate::kprint!("[kernel] {}\n", format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::log!("[kernel] {}\n", format_args!($($arg)*)));
 }
 
-pub fn _kprint(args: core::fmt::Arguments) {
+pub fn _log(args: core::fmt::Arguments) {
     use core::fmt::Write;
-    KERNEL_OUT.lock().write_fmt(args).unwrap();
+    LOG_OUT.lock().write_fmt(args).unwrap();
 }

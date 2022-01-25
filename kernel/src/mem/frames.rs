@@ -51,7 +51,7 @@ impl FrameMap {
     pub unsafe fn init(&mut self, boot_data: &BootData) {
         let start_address = PhysicalAddress::new((boot_data.kernel_end / FRAME_SIZE + 1) * FRAME_SIZE);
 
-        crate::kprintln!("[frames] Creating frame map starting at 0x{:X}.", start_address.data());
+        crate::logln!("[frames] Creating frame map starting at 0x{:X}.", start_address.data());
 
         self.create_buffer(start_address, boot_data.mb_info.memory_map());
 
@@ -87,7 +87,7 @@ impl FrameMap {
             self.set_frame(i, false);
         }
 
-        crate::kprintln!(
+        crate::logln!(
             "[frames] Created frame map for {} frames ({} KiBs).",
             self.total_frames,
             self.total_frames * FRAME_SIZE / 1024,
@@ -140,7 +140,7 @@ impl FrameMap {
         let frame = index * 8 + self.frames[index].trailing_ones() as usize;
         self.set_frame(frame, false);
 
-        crate::kprintln!("[frames] Allocated frame {} at address {:X}.", frame, frame << 12);
+        crate::logln!("[frames] Allocated frame {} at address {:X}.", frame, frame << 12);
 
         Frame {
             start_address: PhysicalAddress::new(frame << 12),
