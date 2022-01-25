@@ -39,18 +39,19 @@ pub struct BootData {
 }
 
 #[no_mangle]
-pub extern "cdecl" fn kernel_main(boot_data: &BootData) -> ! {
+pub unsafe extern "cdecl" fn kernel_main(boot_data: &BootData) -> ! {
     if boot_data.mb_magic != 0x2BADB002 {
         panic!("Magic number does not match. Expected: 0x2BADB002, Found: {:X}", { boot_data.mb_magic });
     } else {
-        println!("Journey OS 0.1.0");
+        println!("Booting Journey OS 0.1.0");
     }
 
-    unsafe { mem::frames::FRAME_MAP.lock().init(boot_data) };
-    println!("{} KiBs of memory mapped.", mem::frames::FRAME_MAP.lock().total_memory_bytes() / 1024);
+    mem::frames::FRAME_MAP.lock().init(boot_data);
+    mem::allocator::init_heap();
 
     #[cfg(test)]
     test_main();
 
+    println!("Ready");
     loop {}
 }

@@ -10,7 +10,8 @@ const IS_PAGE_FLAG: usize = 0x80; // bit 7
 pub struct Entry(usize);
 
 impl Entry {
-    pub fn get_pointer_address(&self) -> Option<PhysicalAddress> {
+    pub fn get_target_address(&self) -> Option<PhysicalAddress> {
+        crate::println!("Entry: 0x{:X}", self.0);
         if self.is_present() {
             Some(PhysicalAddress::new(self.0 & ADDRESS_MASK))
         } else {

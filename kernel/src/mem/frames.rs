@@ -14,10 +14,11 @@ lazy_static! {
 }
 
 #[derive(PartialEq, Clone, Copy)]
+#[repr(usize)]
 pub enum FrameSize {
-    SMALL,
-    LARGE,
-    HUGE,
+    SMALL = FRAME_SIZE,
+    LARGE = FRAME_SIZE * FRAME_SIZE,
+    HUGE = FRAME_SIZE * FRAME_SIZE * FRAME_SIZE,
 }
 
 pub struct Frame {
@@ -50,7 +51,7 @@ impl FrameMap {
     pub unsafe fn init(&mut self, boot_data: &BootData) {
         let start_address = PhysicalAddress::new((boot_data.kernel_end / FRAME_SIZE + 1) * FRAME_SIZE);
 
-        crate::kprintln!("Creating frame map starting at 0x{:X}.", start_address.data());
+        crate::kprintln!("[frames] Creating frame map starting at 0x{:X}.", start_address.data());
 
         self.create_buffer(start_address, boot_data.mb_info.memory_map());
 
@@ -85,6 +86,12 @@ impl FrameMap {
         for i in 0..last_frame {
             self.set_frame(i, false);
         }
+
+        crate::kprintln!(
+            "[frames] Created frame map for {} frames ({} KiBs).",
+            self.total_frames,
+            self.total_frames * FRAME_SIZE / 1024,
+        );
     }
 
     unsafe fn create_buffer(&mut self, start_address: PhysicalAddress, memory_map: MemoryMapPointer) {
@@ -132,22 +139,20 @@ impl FrameMap {
         }
         let frame = index * 8 + self.frames[index].trailing_ones() as usize;
         self.set_frame(frame, false);
+
+        crate::kprintln!("[frames] Allocated frame {} at address {:X}.", frame, frame << 12);
+
         Frame {
             start_address: PhysicalAddress::new(frame << 12),
             free: false,
             size: FrameSize::SMALL,
         }
     }
-
-    pub fn total_memory_bytes(&self) -> usize {
-        self.frames.len() * FRAME_SIZE * 8
-    }
 }
 
 #[os_test]
 fn mem_frames_set_index() {
     // this is fine since the first MiB shouldn't be used anyway
-
     for i in 0..16 {
         FRAME_MAP.lock().set_frame(i, true);
         assert_eq!(Frame::for_address(PhysicalAddress::new(i << 12)).free, true)

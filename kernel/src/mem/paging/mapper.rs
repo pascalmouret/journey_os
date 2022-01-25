@@ -4,6 +4,13 @@ use crate::mem::frames::{Frame, FRAME_MAP, FrameSize};
 use crate::mem::paging::table::{Level4, Table};
 
 pub unsafe fn map_frame(frame: &Frame, target: &VirtualAddress, table: &mut Table<Level4>) {
+    crate::kprintln!(
+        "[allocator] Mapping frame 0x{:X} to 0x{:X} with root table 0x{:X}.",
+        frame.start_address.data(),
+        target.data(),
+        table as *mut Table<Level4> as usize,
+    );
+
     let l3 = table.get_or_create_next(target.l4_index());
 
     if frame.size == FrameSize::HUGE {

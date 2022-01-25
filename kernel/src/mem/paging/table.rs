@@ -63,13 +63,13 @@ impl <L: HierarchicalLevel> Table<L> {
 
     pub fn get_next(&self, index: usize) -> Option<&Table<L::NextLevel>> {
         self.entries[index]
-            .get_pointer_address()
+            .get_target_address()
             .map(|address| unsafe { &*(address.data() as *const Table<L::NextLevel>) })
     }
 
     pub fn get_next_mut(&mut self, index: usize) -> Option<&mut Table<L::NextLevel>> {
         self.entries[index]
-            .get_pointer_address()
+            .get_target_address()
             .map(|address| unsafe { &mut *(address.data() as *mut Table<L::NextLevel>) })
     }
 
@@ -84,12 +84,12 @@ impl <L: HierarchicalLevel> Table<L> {
 
 impl Table<Level1> {
     pub fn get_address(&self, index: usize) -> Option<PhysicalAddress> {
-        self.entries[index].get_pointer_address()
+        self.entries[index].get_target_address()
     }
 }
 
 impl Table<Level4> {
-    pub fn load_current() -> &'static mut Table<Level4> {
+    pub fn load_current<'table>() -> &'table mut Table<Level4> {
         let mut ptr: *mut Table<Level4>;
         unsafe {
             asm!("mov %cr3, {}", out(reg) ptr, options(att_syntax));
