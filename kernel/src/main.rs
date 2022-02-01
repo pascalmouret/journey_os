@@ -4,10 +4,15 @@
 #![feature(asm)]
 #![feature(global_asm)]
 #![feature(custom_test_frameworks)]
+#![feature(const_mut_refs)]
+#![feature(alloc_error_handler)]
 #![test_runner(crate::os_test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+extern crate alloc;
+
 use core::panic::PanicInfo;
+use crate::mem::KiB;
 use crate::multiboot::MultibootInfo;
 
 #[cfg(test)]
@@ -16,6 +21,7 @@ use crate::os_test::test_panic;
 mod io;
 mod multiboot;
 mod mem;
+mod util;
 mod os_test;
 
 global_asm!(include_str!("boot.s"), options(att_syntax));
@@ -28,6 +34,11 @@ fn panic(info: &PanicInfo) -> ! {
     test_panic();
 
     loop {};
+}
+
+#[alloc_error_handler]
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("allocation error: {:?}", layout)
 }
 
 #[repr(C, packed)]
@@ -47,7 +58,7 @@ pub unsafe extern "cdecl" fn kernel_main(boot_data: &BootData) -> ! {
     }
 
     mem::frames::FRAME_MAP.lock().init(boot_data);
-    mem::allocator::init_heap();
+    mem::allocator::ALLOCATOR.lock().init(0x4000_0000_0000, 10 * KiB);
 
     #[cfg(test)]
     test_main();
