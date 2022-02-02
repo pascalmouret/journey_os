@@ -45,7 +45,7 @@ impl<L: TableLevel> Table<L> {
     }
 
     pub fn set(&mut self, index: usize, address: &PhysicalAddress, is_page: bool) {
-        self.entries[index].set(address, is_page)
+        self.entries[index].set(address, is_page);
     }
 }
 
@@ -53,7 +53,7 @@ impl <L: HierarchicalLevel> Table<L> {
     pub fn create_next(&mut self, index: usize) -> &mut Table<L::NextLevel> {
         let frame = FRAME_MAP.lock().alloc_free();
         let ptr = frame.start_address.data() as *mut [u64; ENTRY_COUNT];
-        self.entries[index].set(&frame.start_address, false);
+        self.set(index, &frame.start_address, false);
 
         unsafe {
             ptr.as_mut().unwrap().fill(0);

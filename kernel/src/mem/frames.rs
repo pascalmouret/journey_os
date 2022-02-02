@@ -140,7 +140,7 @@ impl FrameMap {
         let frame = index * 8 + self.frames[index].trailing_ones() as usize;
         self.set_frame(frame, false);
 
-        crate::logln!("[frames] Allocated frame {} at address {:X}.", frame, frame << 12);
+        crate::logln!("[frames] Allocated frame {} at address 0x{:X}.", frame, frame << 12);
 
         Frame {
             start_address: PhysicalAddress::new(frame << 12),
