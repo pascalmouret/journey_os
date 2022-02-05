@@ -1,13 +1,10 @@
 use macros::os_test;
 
-use crate::mem::paging::table::{Level4, Table};
-
 const L1_SHIFT: u8 = 12;
 const L2_SHIFT: u8 = 21;
 const L3_SHIFT: u8 = 30;
 const L4_SHIFT: u8 = 39;
 const INDEX_MASK: usize = 0x1FF; // 9 lowest bits
-
 
 pub struct PhysicalAddress(usize);
 pub struct VirtualAddress(usize);

@@ -6,6 +6,7 @@ use macros::os_test;
 use crate::BootData;
 use crate::multiboot::{MemoryKind, MemoryMapPointer};
 use crate::mem::address::PhysicalAddress;
+use crate::mem::KiB;
 
 const FRAME_SIZE: usize = 4096;
 
@@ -90,7 +91,7 @@ impl FrameMap {
         crate::logln!(
             "[frames] Created frame map for {} frames ({} KiBs).",
             self.total_frames,
-            self.total_frames * FRAME_SIZE / 1024,
+            self.total_frames * FRAME_SIZE / KiB,
         );
     }
 

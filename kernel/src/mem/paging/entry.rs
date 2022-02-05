@@ -4,6 +4,7 @@ use crate::mem::address::PhysicalAddress;
 // so we can just "and out" the actual address (bits 12 - 51)
 const ADDRESS_MASK: usize = 0xFFFFFFFFFF000;
 const PRESENT_FLAG: usize = 0x1; // bit 0
+const WRITABLE_FLAG: usize = 0x2; // bit 1
 const IS_PAGE_FLAG: usize = 0x80; // bit 7
 
 #[repr(packed(8))]
@@ -23,7 +24,7 @@ impl Entry {
     }
 
     pub fn set(&mut self, address: &PhysicalAddress, is_page: bool) {
-        self.0 = (address.data() & ADDRESS_MASK) + PRESENT_FLAG;
+        self.0 = (address.data() & ADDRESS_MASK) + PRESENT_FLAG + WRITABLE_FLAG;
         if is_page {
             self.0 + IS_PAGE_FLAG;
         }
