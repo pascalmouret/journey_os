@@ -83,7 +83,7 @@ impl FrameMap {
         // mark everything until end of frame map as used
         let frames_used = self.frames.len() / FRAME_SIZE + 1;
         let frame_index = (self as *const FrameMap as usize) / FRAME_SIZE;
-        let last_frame = frame_index + frames_used;
+        let last_frame = frame_index + frames_used + 1;
         for i in 0..last_frame {
             self.set_frame(i, false);
         }

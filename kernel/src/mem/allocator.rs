@@ -1,6 +1,7 @@
 use alloc::boxed::Box;
 use core::alloc::{GlobalAlloc, Layout};
-use core::ops::{Deref, Index};
+use core::borrow::BorrowMut;
+use core::ops::{Deref, DerefMut, Index};
 use macros::os_test;
 
 use crate::mem::address::VirtualAddress;
@@ -13,6 +14,9 @@ use crate::util::locked::Locked;
 
 #[global_allocator]
 pub static ALLOCATOR: Locked<LinkedHeap> = Locked::new(LinkedHeap::new());
+
+const MEMORY_NODE_SIZE: usize = core::mem::size_of::<MemoryNode>();
+const MEMORY_NODE_ALIGN: usize = core::mem::align_of::<MemoryNode>();
 
 struct MemoryNode {
     size: usize,
@@ -47,11 +51,12 @@ impl Region {
 
 pub struct LinkedHeap {
     list: MemoryNode,
+    limit: usize,
 }
 
 impl LinkedHeap {
     pub const fn new() -> LinkedHeap {
-        LinkedHeap { list: MemoryNode::new(0) }
+        LinkedHeap { list: MemoryNode::new(0), limit: 0 }
     }
 
     pub unsafe fn init(&mut self, start: usize, size: usize) {
@@ -68,16 +73,16 @@ impl LinkedHeap {
             );
         }
 
+        self.limit = start + size;
         self.free_region(start, size);
 
         crate::logln!("[allocator] Built 0x{:X} byte kernel heap at 0x{:X}.", size, start);
     }
 
     pub unsafe fn free_region(&mut self, start: usize, size: usize) {
-        assert!(size >= core::mem::size_of::<MemoryNode>(), "Freed region too small for memory node.");
-        assert_eq!(start % core::mem::align_of::<MemoryNode>(), 0);
-
-        crate::logln!("[allocator] Freeing region of size {} at 0x{:X}.", size, start);
+        assert!(size >= MEMORY_NODE_SIZE, "Freed region too small for memory node.");
+        assert_eq!(start % MEMORY_NODE_ALIGN, 0, "Freed region is not properly aligned");
+        assert!(start + size <= self.limit, "Freed region exceeds heap limit.");
 
         let mut node = MemoryNode::new(size);
         node.next = self.list.next.take();
@@ -86,7 +91,7 @@ impl LinkedHeap {
         self.list.next = Some(&mut *ptr);
     }
 
-    pub unsafe fn find_region(&mut self, size: usize, align: usize) -> Option<Region> {
+    pub unsafe fn find_region(&mut self, size: usize, align: usize, merged: bool) -> Option<Region> {
         let mut current = &mut self.list;
 
         while let Some(ref mut node) = current.next {
@@ -100,20 +105,25 @@ impl LinkedHeap {
             }
         }
 
-        // TODO: merge blocks if nothing is found
+        if !merged {
+            self.merge_list();
+            return self.find_region(size, align, true);
+        }
+
+        // TODO: expand heap if nothing is found
         return None;
     }
 
     fn region_from_node(size: usize, align: usize, node: &MemoryNode) -> Result<(usize, usize), ()> {
         let alloc_start = align_address(node.start_address(), align);
-        let alloc_end = align_address(alloc_start + size, core::mem::align_of::<MemoryNode>());
+        let alloc_end = align_address(alloc_start + size, MEMORY_NODE_ALIGN);
 
         if node.end_address() < alloc_end {
             return Err(())
         }
 
         let remainder = node.end_address() - alloc_end;
-        if remainder != 0 && remainder < core::mem::size_of::<MemoryNode>() {
+        if remainder != 0 && remainder < MEMORY_NODE_SIZE {
             return Err(());
         }
 
@@ -122,13 +132,76 @@ impl LinkedHeap {
 
     fn aligned_layout(layout: Layout) -> Layout {
         layout
-            .align_to(core::mem::align_of::<MemoryNode>())
+            .align_to(MEMORY_NODE_ALIGN)
             .expect("Failed to align Layout to contain MemoryNode.")
             .pad_to_align()
     }
 
     fn actual_size(layout: Layout) -> usize {
-        layout.size().max(core::mem::size_of::<MemoryNode>())
+        layout.size().max(MEMORY_NODE_SIZE)
+    }
+
+    unsafe fn merge_list(&mut self) {
+        crate::logln!("[allocator] Merging allocator list.");
+        // TODO: fix this cheat
+        let head = &mut *(self.list.start_address() as *mut MemoryNode);
+        self.merge_list_rec(head);
+    }
+
+    unsafe fn merge_list_rec(&mut self, current: &mut MemoryNode) {
+        if current.next.is_none() {
+            return
+        }
+
+        let adjacent = self.find_adjacent_node_parent(current.next.as_ref().unwrap());
+
+        if let Some(adjacent_parent) = adjacent {
+            let merged = Self::merge_nodes(current, adjacent_parent);
+            self.free_region(merged.0, merged.1);
+            self.merge_list();
+        } else {
+            if let Some(node) = &mut current.next {
+                self.merge_list_rec(node)
+            }
+        }
+    }
+
+    fn find_adjacent_node_parent(&mut self, node: &MemoryNode) -> Option<&mut MemoryNode> {
+        let mut current = &mut self.list;
+
+        while let Some(candidate) = &current.next {
+            if candidate.start_address() >= node.end_address()
+                && candidate.start_address() - node.end_address() < MEMORY_NODE_SIZE
+            {
+                return Some(current)
+            }
+
+            if candidate.end_address() <= node.start_address()
+                && node.start_address() - candidate.end_address() < MEMORY_NODE_SIZE
+            {
+                return Some(current)
+            }
+
+            current = current.next.as_mut().unwrap();
+        }
+
+        return None;
+    }
+
+    fn merge_nodes(
+        node1_parent: &mut MemoryNode,
+        node2_parent: &mut MemoryNode,
+    ) -> (usize, usize) {
+        let node1 = node1_parent.next.take().unwrap();
+        let node2 = node2_parent.next.take().unwrap();
+
+        node1_parent.next = node1.next.take();
+        node2_parent.next = node2.next.take();
+
+        let start = node1.start_address().min(node2.start_address());
+        let end = node1.end_address().max(node2.end_address());
+
+        (start, end - start)
     }
 }
 
@@ -140,6 +213,7 @@ unsafe impl GlobalAlloc for Locked<LinkedHeap> {
         if let Some(region) = allocator.find_region(
             aligned_layout.size().max(core::mem::size_of::<MemoryNode>()),
             LinkedHeap::actual_size(layout),
+            false,
         ) {
             let remainder = region.node.end_address() - region.alloc_end;
             if remainder > 0 {
@@ -166,13 +240,28 @@ fn mem_allocator_create_box() {
 }
 
 #[os_test]
-fn mem_allocator_create_vector() {
-    let mut vec = alloc::vec!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
-    assert_eq!(*vec.index(3), 3);
-
-    for i in 10..100 {
-        vec.push(i)
+fn mem_allocator_create_deallocate_box() {
+    let address: usize;
+    {
+        let boxed = Box::new(731);
+        address = boxed.deref() as *const i32 as usize;
     }
-    assert_eq!(*vec.index(97), 97);
+
+    let boxed2 = Box::new(137);
+    assert_eq!(boxed2.deref() as *const i32 as usize, address);
 }
 
+#[os_test]
+fn mem_allocator_create_vector() {
+    {
+        let mut vec = alloc::vec!();
+        for i in 0..500 {
+            vec.push(i)
+        }
+        assert_eq!(*vec.index(97), 97);
+    }
+
+
+    let mut boxed = Box::new(412);
+    assert_eq!(*boxed.deref(), 412);
+}
