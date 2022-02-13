@@ -10,12 +10,12 @@ lazy_static! {
 }
 
 pub struct SerialPort {
-    data: Port,
-    interrupt: Port,
-    int_ident_fifo: Port,
-    line_control: Port,
-    modem_control: Port,
-    line_status: Port,
+    data: Port<u8>,
+    interrupt: Port<u8>,
+    int_ident_fifo: Port<u8>,
+    line_control: Port<u8>,
+    modem_control: Port<u8>,
+    line_status: Port<u8>,
     // modem_status: Port,
     // scratch: Port,
 }
@@ -30,38 +30,38 @@ impl SerialPort {
     // TODO: setup proper bitmaps, for now I just need it to print
     pub unsafe fn open(port: u16) -> SerialPort {
         let serial = SerialPort {
-            data: Port::open(port),
-            interrupt: Port::open(port + 1),
-            int_ident_fifo: Port::open(port + 2),
-            line_control: Port::open(port + 3),
-            modem_control: Port::open(port + 4),
-            line_status: Port::open(port + 5),
+            data: Port::<u8>::open(port),
+            interrupt: Port::<u8>::open(port + 1),
+            int_ident_fifo: Port::<u8>::open(port + 2),
+            line_control: Port::<u8>::open(port + 3),
+            modem_control: Port::<u8>::open(port + 4),
+            line_status: Port::<u8>::open(port + 5),
             // modem_status: Port::open(port + 6),
             // scratch: Port::open(port + 7),
         };
 
-        serial.interrupt.write(0x00 as u8);       // Disable interrupts
-        serial.line_control.write(0x80 as u8);    // Enable DLAB to set baud rate divisor
-        serial.data.write(0x03 as u8);            // Baud divisor 3 (38400 baud)
-        serial.interrupt.write(0x00 as u8);       // Empty high byte for baud divisor
-        serial.line_control.write(0x03 as u8);    // 8bit characters, 1bit stop, no parity
-        serial.int_ident_fifo.write(0xC7 as u8);  // Enable FIFO, clear with 14 byte threshold
-        serial.modem_control.write(0x0B as u8);   // IRQs enabled, RTS/DSR set
+        serial.interrupt.write(0x00);       // Disable interrupts
+        serial.line_control.write(0x80);    // Enable DLAB to set baud rate divisor
+        serial.data.write(0x03);            // Baud divisor 3 (38400 baud)
+        serial.interrupt.write(0x00);       // Empty high byte for baud divisor
+        serial.line_control.write(0x03);    // 8bit characters, 1bit stop, no parity
+        serial.int_ident_fifo.write(0xC7);  // Enable FIFO, clear with 14 byte threshold
+        serial.modem_control.write(0x0B);   // IRQs enabled, RTS/DSR set
 
         // test port in loopback mode
-        serial.modem_control.write(0x1E as u8);   // Set to loopback mode
-        serial.data.write(0x42 as u8);
+        serial.modem_control.write(0x1E);   // Set to loopback mode
+        serial.data.write(0x42);
         let result: u8 = serial.data.read();
         if result != 0x42 {
             panic!("Expected loopback to return 0x42, received {:X}.", result);
         }
-        serial.modem_control.write(0x0F as u8);   // back to normal operation
+        serial.modem_control.write(0x0F);   // back to normal operation
 
         return serial;
     }
 
     pub fn write(&self, byte: u8) {
-        while self.line_status.read::<u8>() & 0x20 == 0 {}    // wait for empty buffer
+        while self.line_status.read() & 0x20 == 0 {}    // wait for empty buffer
         self.data.write(byte);
     }
 

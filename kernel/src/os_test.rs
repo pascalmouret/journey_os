@@ -1,6 +1,6 @@
 #[cfg(test)]
 pub mod os_test {
-    use crate::io::port::Port;
+    use crate::io::port::{Port, PortIO};
     use crate::io::output::STD_OUT;
     use crate::io::serial::COM1;
 
@@ -14,12 +14,10 @@ pub mod os_test {
     }
 
     pub fn test_runner(tests: &[&OSTest]) {
-        STD_OUT.lock().set(&COM1);
-        crate::println!("Running tests...");
+        crate::log!("[os_test] Running tests...");
         for test in tests {
-            crate::print!("{}...", test.name);
+            crate::print!("[os_test] {}...", test.name);
             (test.test)();
-            crate::print!("ok\n")
         }
         exit(true);
     }
@@ -29,7 +27,7 @@ pub mod os_test {
     }
 
     fn exit(success: bool) {
-        let port = unsafe { Port::open(ISA_PORT) };
+        let port = unsafe { Port::<u32>::open(ISA_PORT) };
         port.write(if success { SUCCESS_CODE } else { FAILURE_CODE });
     }
 }

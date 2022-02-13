@@ -1,3 +1,5 @@
+use core::marker::PhantomData;
+
 pub trait PortIO {
     unsafe fn write(address: u16, value: Self);
     unsafe fn read(address: u16) -> Self;
@@ -67,23 +69,23 @@ impl PortIO for u32 {
     }
 }
 
-pub struct Port {
+pub struct Port<A: PortIO> {
     address: u16,
+    width: PhantomData<A>,
 }
 
-// TODO: make port fixed size
-impl Port {
-    pub unsafe fn open(address: u16) -> Port {
-        Port { address }
+impl<A: PortIO> Port<A> {
+    pub unsafe fn open(address: u16) -> Port<A> {
+        Port { address, width: PhantomData }
     }
 
-    pub fn write<A: PortIO>(&self, data: A) {
+    pub fn write(&self, data: A) {
         unsafe {
             A::write(self.address, data);
         }
     }
 
-    pub fn read<A: PortIO>(&self) -> A {
+    pub fn read(&self) -> A {
         unsafe {
             A::read(self.address)
         }
