@@ -14,9 +14,9 @@ pub mod os_test {
     }
 
     pub fn test_runner(tests: &[&OSTest]) {
-        crate::log!("[os_test] Running tests...");
+        crate::logln!("[os_test] Running tests...");
         for test in tests {
-            crate::print!("[os_test] {}...", test.name);
+            crate::logln!("[os_test] {}...", test.name);
             (test.test)();
         }
         exit(true);
