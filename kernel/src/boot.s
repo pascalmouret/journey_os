@@ -21,7 +21,7 @@
 .section .bss.kernel
 .align 16
 stack_bottom:
-.skip 16384 # 16 KiB
+.skip 65536 # 64 KiB
 stack_top:
 
 .section .data.kernel
@@ -126,7 +126,6 @@ start64:
 	/*
     Now that we are in long mode and have a well defined stack, we can
     move into rust code.
-    Note that we already pushed the multiboot info onto the stack at the very beginning.
 	*/
 	call kernel_main
 
