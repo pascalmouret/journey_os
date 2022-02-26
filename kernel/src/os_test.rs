@@ -1,8 +1,6 @@
 #[cfg(test)]
 pub mod os_test {
-    use crate::io::port::{Port, PortIO};
-    use crate::io::output::STD_OUT;
-    use crate::io::serial::COM1;
+    use crate::io::port::{Port};
 
     const ISA_PORT: u16 = 0xF4;
     const SUCCESS_CODE: u32 = 42;
