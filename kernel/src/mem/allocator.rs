@@ -262,6 +262,6 @@ fn mem_allocator_create_vector() {
     }
 
 
-    let mut boxed = Box::new(412);
+    let boxed = Box::new(412);
     assert_eq!(*boxed.deref(), 412);
 }
