@@ -6,6 +6,8 @@
 #![feature(custom_test_frameworks)]
 #![feature(const_mut_refs)]
 #![feature(alloc_error_handler)]
+#![feature(const_raw_ptr_to_usize_cast)]
+#![feature(abi_x86_interrupt)]
 #![test_runner(crate::os_test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
@@ -23,12 +25,13 @@ mod multiboot;
 mod mem;
 mod util;
 mod os_test;
+mod interrupt;
 
 global_asm!(include_str!("boot.s"), options(att_syntax));
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println!("{}", info);
+    logln!("{}", info);
 
     #[cfg(test)]
     test_panic();
@@ -57,6 +60,7 @@ pub unsafe extern "cdecl" fn kernel_main(boot_data: &BootData) -> ! {
         println!("Booting Journey OS 0.1.0");
     }
 
+    interrupt::idt::INTERRUPTS.lock().init();
     mem::frames::FRAME_MAP.lock().init(boot_data);
     mem::allocator::ALLOCATOR.lock().init(0x4000_0000_0000, 10 * KiB);
 
