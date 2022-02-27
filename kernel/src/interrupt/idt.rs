@@ -3,7 +3,8 @@ use lazy_static::lazy_static;
 
 use macros::os_test;
 use crate::interrupt::pic::{PIC_PRIMARY, PIC_SECONDARY};
-use crate::interrupt::handlers::{test, ExceptionStackFrame};
+use crate::interrupt::handlers;
+use crate::interrupt::handlers::ExceptionStackFrame;
 
 const IDT_SIZE: usize = 256;
 
@@ -79,6 +80,8 @@ impl IDT {
 
     pub unsafe fn init(&mut self) {
         crate::logln!("[interrupts] Initialize IDT.");
+        self.set_handlers();
+
         // disable PIC
         // TODO: remap PIC offsets
         PIC_PRIMARY.lock().disable();
@@ -87,15 +90,78 @@ impl IDT {
         self.load_as_idt();
     }
 
+    unsafe fn set_handlers(&mut self) {
+        // CPU EXCEPTIONS
+        self.set_exception_handler(0x00, handlers::divide_by_zero);
+        self.set_exception_handler(0x01, handlers::debug);
+        self.set_exception_handler(0x02, handlers::non_maskable);
+        self.set_exception_handler(0x03, handlers::breakpoint);
+        self.set_exception_handler(0x04, handlers::overflow);
+        self.set_exception_handler(0x05, handlers::bound_range_exceeded);
+        self.set_exception_handler(0x06, handlers::invalid_opcode);
+        self.set_exception_handler(0x07, handlers::device_not_available);
+        self.set_error_exception_handler(0x08, handlers::double_fault);
+        self.set_error_exception_handler(0x0A, handlers::invalid_tss);
+        self.set_error_exception_handler(0x0B, handlers::segment_not_present);
+        self.set_error_exception_handler(0x0C, handlers::stack_segment_fault);
+        self.set_error_exception_handler(0x0D, handlers::general_protection_fault);
+        self.set_error_exception_handler(0x0E, handlers::page_fault);
+        self.set_exception_handler(0x10, handlers::x87_floating_point_exception);
+        self.set_error_exception_handler(0x11, handlers::alignment_check);
+        self.set_exception_handler(0x12, handlers::machine_check);
+        self.set_exception_handler(0x13, handlers::simd_floating_point_exception);
+        self.set_exception_handler(0x14, handlers::virtualization_exception);
+        self.set_error_exception_handler(0x15, handlers::control_protection_exception);
+        self.set_exception_handler(0x1C, handlers::hypervisor_injection_exception);
+        self.set_error_exception_handler(0x1D, handlers::vmm_communication_exception);
+        self.set_error_exception_handler(0x1E, handlers::security_exception);
+        // RESERVED UNTIL 0x1F
+    }
+
+    pub unsafe fn set_exception_handler(
+        &mut self,
+        vector: usize,
+        handler: unsafe extern "x86-interrupt" fn(ExceptionStackFrame),
+    ) {
+        self.set_handler(
+            vector,
+            IDTEntry::new(
+                handler as *const u8 as usize,
+                GateType::Interrupt,
+            ),
+        );
+    }
+
+    pub unsafe fn set_error_exception_handler(
+        &mut self,
+        vector: usize,
+        handler: unsafe extern "x86-interrupt" fn(ExceptionStackFrame, error: u32),
+    ) {
+        self.set_handler(
+            vector,
+            IDTEntry::new(
+                handler as *const u8 as usize,
+                GateType::Interrupt,
+            ),
+        );
+    }
+
     pub unsafe fn set_interrupt_handler(
         &mut self,
         vector: usize,
         handler: unsafe extern "x86-interrupt" fn(ExceptionStackFrame)
     ) {
-        self.entries[vector] = IDTEntry::new(
-            handler as *const u8 as usize,
-            GateType::Interrupt,
+        self.set_handler(
+            vector,
+            IDTEntry::new(
+                handler as *const u8 as usize,
+                GateType::Interrupt,
+            ),
         );
+    }
+
+    fn set_handler(&mut self, vector: usize, entry: IDTEntry) {
+        self.entries[vector] = entry;
     }
 
     unsafe fn load_as_idt(&self) {
@@ -119,7 +185,7 @@ fn interrupt_idt_new_idt_entry() {
 #[os_test]
 fn interrupt_idt_int() {
     unsafe {
-        INTERRUPTS.lock().set_interrupt_handler(42, test);
+        INTERRUPTS.lock().set_interrupt_handler(42, handlers::test);
         asm!("int 42")
     }
 }
