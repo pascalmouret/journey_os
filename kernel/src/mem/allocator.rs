@@ -60,19 +60,6 @@ impl LinkedHeap {
     }
 
     pub unsafe fn init(&mut self, start: usize, size: usize) {
-        let paging_table = Table::load_current();
-        let frames = size / FrameSize::SMALL as usize + usize::from(size % FrameSize::SMALL as usize != 0);
-
-        // TODO: use page faults to assign pages
-        for i in 0..frames {
-            let frame = FRAME_MAP.lock().alloc_free();
-            map_frame(
-                &frame,
-                &VirtualAddress::new(start + FrameSize::SMALL as usize * i),
-                paging_table,
-            );
-        }
-
         self.limit = start + size;
         self.free_region(start, size);
 

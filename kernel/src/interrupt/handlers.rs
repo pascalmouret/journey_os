@@ -1,3 +1,8 @@
+use crate::mem::address::{PhysicalAddress, VirtualAddress};
+use crate::mem::frames::{Frame, FRAME_MAP};
+use crate::mem::paging::mapper::map_frame;
+use crate::mem::paging::table::Table;
+
 #[repr(C)]
 pub struct ExceptionStackFrame {
     pub instruction_pointer: u64,
@@ -90,8 +95,24 @@ pub unsafe extern "x86-interrupt" fn general_protection_fault(stack_frame: Excep
 
 // 0x0E: FAULT
 pub unsafe extern "x86-interrupt" fn page_fault(stack_frame: ExceptionStackFrame, error: u32) {
-    crate::logln!("Page fault: 0x{:X}. Aborting.", error);
-    asm!("hlt");
+    let address: usize;
+    asm!("mov %cr2, {}", out(reg) address, options(att_syntax));
+
+    crate::logln!("Page fault: 0x{:X}. Address: 0x{:X}", error, address);
+
+    // page is not present and we're in kernel mode (bit 1 = present, bit 3: user)
+    if error & 0x1 == 0 && error & 0x4 == 0 {
+        let frame = &FRAME_MAP.lock().alloc_free();
+
+        map_frame(
+            frame,
+            &VirtualAddress::new(address >> 12 << 12),
+            Table::load_current(),
+        )
+    } else {
+        // TODO: implement userland paging
+        asm!("hlt");
+    }
 }
 
 // 0x10: FAULT
