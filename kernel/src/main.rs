@@ -68,5 +68,6 @@ pub unsafe extern "cdecl" fn kernel_main(boot_data: &BootData) -> ! {
     test_main();
 
     println!("Ready");
+
     loop {}
 }

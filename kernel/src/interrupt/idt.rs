@@ -2,7 +2,6 @@ use spin::Mutex;
 use lazy_static::lazy_static;
 
 use macros::os_test;
-use crate::interrupt::pic::{PIC_PRIMARY, PIC_SECONDARY};
 use crate::interrupt::handlers;
 use crate::interrupt::handlers::ExceptionStackFrame;
 
@@ -81,13 +80,12 @@ impl IDT {
     pub unsafe fn init(&mut self) {
         crate::logln!("[interrupts] Initialize IDT.");
         self.set_handlers();
-
-        // disable PIC
-        // TODO: remap PIC offsets
-        PIC_PRIMARY.lock().disable();
-        PIC_SECONDARY.lock().disable();
-
         self.load_as_idt();
+
+        crate::interrupt::pic::PIC::initialize(0x20, 0x28);
+
+        // re-enable maskable interrupts
+        asm!("sti");
     }
 
     unsafe fn set_handlers(&mut self) {
@@ -116,6 +114,24 @@ impl IDT {
         self.set_error_exception_handler(0x1D, handlers::vmm_communication_exception);
         self.set_error_exception_handler(0x1E, handlers::security_exception);
         // RESERVED UNTIL 0x1F
+
+        // PIC interrupts
+        self.set_interrupt_handler(0x20, handlers::pic_irq_0);
+        self.set_interrupt_handler(0x21, handlers::pic_irq_1);
+        self.set_interrupt_handler(0x22, handlers::pic_irq_2);
+        self.set_interrupt_handler(0x23, handlers::pic_irq_3);
+        self.set_interrupt_handler(0x24, handlers::pic_irq_4);
+        self.set_interrupt_handler(0x25, handlers::pic_irq_5);
+        self.set_interrupt_handler(0x26, handlers::pic_irq_6);
+        self.set_interrupt_handler(0x27, handlers::pic_irq_7);
+        self.set_interrupt_handler(0x28, handlers::pic_irq_8);
+        self.set_interrupt_handler(0x29, handlers::pic_irq_9);
+        self.set_interrupt_handler(0x2A, handlers::pic_irq_10);
+        self.set_interrupt_handler(0x2B, handlers::pic_irq_11);
+        self.set_interrupt_handler(0x2C, handlers::pic_irq_12);
+        self.set_interrupt_handler(0x2D, handlers::pic_irq_13);
+        self.set_interrupt_handler(0x2E, handlers::pic_irq_14);
+        self.set_interrupt_handler(0x2F, handlers::pic_irq_15);
     }
 
     pub unsafe fn set_exception_handler(
@@ -127,7 +143,7 @@ impl IDT {
             vector,
             IDTEntry::new(
                 handler as *const u8 as usize,
-                GateType::Interrupt,
+                GateType::Trap,
             ),
         );
     }
@@ -141,7 +157,7 @@ impl IDT {
             vector,
             IDTEntry::new(
                 handler as *const u8 as usize,
-                GateType::Interrupt,
+                GateType::Trap,
             ),
         );
     }

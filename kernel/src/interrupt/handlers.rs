@@ -117,8 +117,7 @@ pub unsafe extern "x86-interrupt" fn page_fault(stack_frame: ExceptionStackFrame
 
 // 0x10: FAULT
 pub unsafe extern "x86-interrupt" fn x87_floating_point_exception(stack_frame: ExceptionStackFrame) {
-    crate::logln!("x87 floating point exception. Aborting.");
-    asm!("hlt");
+    crate::logln!("x87 floating point exception. Shrugging.");
 }
 
 // 0x11: FAULT
@@ -167,4 +166,100 @@ pub unsafe extern "x86-interrupt" fn vmm_communication_exception(stack_frame: Ex
 pub unsafe extern "x86-interrupt" fn security_exception(stack_frame: ExceptionStackFrame, error: u32) {
     crate::logln!("Security exception: 0x{:X}. Aborting.", error);
     asm!("hlt");
+}
+
+// 0x20: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_0(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 0");
+    crate::interrupt::pic::PIC::end_of_interrupt(0);
+}
+
+// 0x21: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_1(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 1");
+    crate::interrupt::pic::PIC::end_of_interrupt(1);
+}
+
+// 0x22: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_2(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 2");
+    crate::interrupt::pic::PIC::end_of_interrupt(2);
+}
+
+// 0x23: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_3(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 3");
+    crate::interrupt::pic::PIC::end_of_interrupt(3);
+}
+
+// 0x24: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_4(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 4");
+    crate::interrupt::pic::PIC::end_of_interrupt(4);
+}
+
+// 0x25: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_5(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 5");
+    crate::interrupt::pic::PIC::end_of_interrupt(5);
+}
+
+// 0x26: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_6(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 6");
+    crate::interrupt::pic::PIC::end_of_interrupt(6);
+}
+
+// 0x27: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_7(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 7");
+    crate::interrupt::pic::PIC::end_of_interrupt(7);
+}
+
+// 0x28: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_8(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 8");
+    crate::interrupt::pic::PIC::end_of_interrupt(8);
+}
+
+// 0x29: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_9(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 9");
+    crate::interrupt::pic::PIC::end_of_interrupt(9);
+}
+
+// 0x2A: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_10(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 10");
+    crate::interrupt::pic::PIC::end_of_interrupt(10);
+}
+
+// 0x2B: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_11(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 11");
+    crate::interrupt::pic::PIC::end_of_interrupt(11);
+}
+
+// 0x2C: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_12(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 12");
+    crate::interrupt::pic::PIC::end_of_interrupt(12);
+}
+
+// 0x2D: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_13(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 13");
+    crate::interrupt::pic::PIC::end_of_interrupt(13);
+}
+
+// 0x2E: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_14(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 14");
+    crate::interrupt::pic::PIC::end_of_interrupt(14);
+}
+
+// 0x2F: PIC Interrupt
+pub unsafe extern "x86-interrupt" fn pic_irq_15(stack_frame: ExceptionStackFrame) {
+    crate::logln!("IRQ 15");
+    crate::interrupt::pic::PIC::end_of_interrupt(15);
 }
