@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 use spin::Mutex;
 use lazy_static::lazy_static;
 
@@ -177,9 +179,9 @@ impl IDT {
 fn interrupt_idt_new_idt_entry() {
     let entry = IDTEntry::new(0x123456789ABCDEF1, GateType::Interrupt);
 
-    assert_eq!(entry.address_low, 0xDEF1);
-    assert_eq!(entry.address_mid, 0x9ABC);
-    assert_eq!(entry.address_high, 0x12345678);
+    assert_eq!({ entry.address_low }, 0xDEF1);
+    assert_eq!({ entry.address_mid }, 0x9ABC);
+    assert_eq!({ entry.address_high }, 0x12345678);
 }
 
 #[os_test]

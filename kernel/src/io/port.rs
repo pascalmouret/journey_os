@@ -1,4 +1,5 @@
 use core::marker::PhantomData;
+use core::arch::asm;
 
 pub trait PortIO {
     unsafe fn write(address: u16, value: Self);

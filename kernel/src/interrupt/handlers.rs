@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 use crate::mem::address::{PhysicalAddress, VirtualAddress};
 use crate::mem::frames::{Frame, FRAME_MAP};
 use crate::mem::paging::mapper::map_frame;

@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 use macros::os_test;
 use crate::mem::address::VirtualAddress;
 use crate::mem::frames::{Frame, FRAME_MAP, FrameSize};

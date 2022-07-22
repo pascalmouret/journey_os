@@ -1,18 +1,17 @@
 #![feature(panic_info_message)]
 #![no_std]
 #![no_main]
-#![feature(asm)]
-#![feature(global_asm)]
 #![feature(custom_test_frameworks)]
 #![feature(const_mut_refs)]
 #![feature(alloc_error_handler)]
-#![feature(const_raw_ptr_to_usize_cast)]
 #![feature(abi_x86_interrupt)]
 #![test_runner(crate::os_test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
 extern crate alloc;
 
+use core::arch::asm;
+use core::arch::global_asm;
 use core::panic::PanicInfo;
 use crate::mem::KiB;
 use crate::multiboot::MultibootInfo;
